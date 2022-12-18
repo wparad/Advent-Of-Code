@@ -48,7 +48,8 @@ let currentLeftX = 2;
 let currentTopY = 3;
 let rock = rockTypes[0];
 for (let rockIndex = 0; rockIndex < 1000000000000; rockIndex++) {
-    rock = rockTypes[rockIndex % 5];
+    const rockType = rockIndex % 5;
+    rock = rockTypes[rockType];
     currentLeftX = 2;
 
     const bottomEdge = Math.min(...rock.map(r => r.y));
