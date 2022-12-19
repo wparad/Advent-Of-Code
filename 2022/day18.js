@@ -2908,9 +2908,13 @@ input = `13,19,7
 6,6,18`;
 
 const grid = {};
+const airGrid = {};
 
+let max = 0;
 const cubes = input.split('\n').map(line => {
-    return ints(line);
+    let result = ints(line);
+    max = Math.max(max, ...result);
+    return result;
 });
 cubes.map(([x, y, z]) => {
     if (!grid[x]) {
@@ -2924,21 +2928,40 @@ cubes.map(([x, y, z]) => {
 
 let sum = 0;
 
-// Scan from the top
-for (let x = Math.min(...Object.keys(grid)); x <= Math.max(...Object.keys(grid)); x++) {
-    grid[x]
+const stack = [[-1, -1, -1]];
+
+while (p = stack.pop()) {
+    if (!p) {
+        break;
+    }
+    let [x, y, z] = p;
+    if (airGrid[x]?.[y]?.[z] || x < -1 || y < -1 || z < -1 || x > max + 2 || y > max + 2 || z > max + 2) {
+        continue;
+    }
+
+    if (grid[x]?.[y]?.[z]) {
+        continue;
+    }
+
+    if (!airGrid[x]) { airGrid[x] = {}; }
+    if (!airGrid[x][y]) { airGrid[x][y] = {}; }
+    airGrid[x][y][z] = 'A';
+
+    const touchingSum = ((grid[x-1]?.[y]?.[z] || 0) + (grid[x+1]?.[y]?.[z] || 0) + (grid[x]?.[y-1]?.[z] || 0) + (grid[x]?.[y+1]?.[z] ||0) + (grid[x]?.[y]?.[z-1] ||0) + (grid[x]?.[y]?.[z+1] ||0));    
+    sum += touchingSum;
+
+    stack.push([x+1, y, z]);
+    stack.push([x-1, y, z]);
+    stack.push([x, y-1, z]);
+    stack.push([x, y+1, z]);
+    stack.push([x, y, z+1]);
+    stack.push([x, y, z-1]);
 }
 
-// the bottom
-
-// left than right
-
-// from than back
-
-
-cubes.forEach(([x, y, z]) => {
-    sum += 6 - ((grid[x-1]?.[y]?.[z] || 0) + (grid[x+1]?.[y]?.[z] || 0) + (grid[x]?.[y-1]?.[z] || 0) + (grid[x]?.[y+1]?.[z] ||0) + (grid[x]?.[y]?.[z-1] ||0) + (grid[x]?.[y]?.[z+1] ||0));
-})
+// Part 1;
+// cubes.forEach(([x, y, z]) => {
+//     sum += 6 - ((grid[x-1]?.[y]?.[z] || 0) + (grid[x+1]?.[y]?.[z] || 0) + (grid[x]?.[y-1]?.[z] || 0) + (grid[x]?.[y+1]?.[z] ||0) + (grid[x]?.[y]?.[z-1] ||0) + (grid[x]?.[y]?.[z+1] ||0));
+// })
 
 console.log(grid, sum);
 
