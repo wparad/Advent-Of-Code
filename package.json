@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": ">=14.x"
+  },
   "scripts": {
     "start": "nodemon"
   },
@@ -24,6 +27,11 @@
     "nodemon": "^2.0.20",
     "simple-statistics": "^7.8.0",
     "@babel/core": "^7.15.8",
-    "@babel/eslint-parser": "^7.15.8"
+    "@babel/eslint-parser": "^7.15.8",
+    "eslint": "^7.20.0",
+    "eslint-config-cimpress-atsquad": "^1.0.67",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-mocha": "^8.0.0",
+    "eslint-plugin-node": "^11.1.0"
   }
 }
