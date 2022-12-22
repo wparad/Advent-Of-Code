@@ -66,7 +66,11 @@ const blueprints = {};
 const robots = { ore: 1, clay: 0, obsidian: 0, geode: 0 };
 input.trim().split('\n').map(line => {
   [id, oreCost, clayCost, obsidianOreCost, obsidianClayCost, geodeOreCost, geodObsidianCost] = ints(line);
-  blueprints[id] = { blueprintId: id, costs: [{ o: oreCost }, { o: clayCost }, {o: obsidianOreCost, c: obsidianClayCost }, { o: geodeOreCost, ob: geodObsidianCost }] };
+  blueprints[id] = {
+    blueprintId: id,
+    globalMax: 0,
+    costs: [{ o: oreCost }, { o: clayCost }, {o: obsidianOreCost, c: obsidianClayCost }, { o: geodeOreCost, ob: geodObsidianCost }]
+  };
 })
 
 const robotOrderMap = {
@@ -92,52 +96,80 @@ function canProduceRobot(blueprintId, robotLetter, counts) {
   return null;
 }
 
-const maxValueForStack = {};
+let maxValueForStack = {};
 function recurse(blueprintId, counts, robots, minute, stackOrder) {
+  if (counts[3] >= blueprints[blueprintId].globalMax) {
+    blueprints[blueprintId].globalMax = Math.max(counts[3], blueprints[blueprintId].globalMax);
+
+    [...Array(stackOrder.length)].map((_, l) => {
+      maxValueForStack[stackOrder.slice(0, l)] = Math.max(maxValueForStack[stackOrder.slice(0, l)], counts[3]);
+    })
+
+    blueprints[blueprintId].maxSequence = stackOrder;
+  }
+
   if (minute === 25) {
-    console.log(counts[3], Object.keys(maxValueForStack).length);
+    console.log(stackOrder, counts[3], blueprints[blueprintId].globalMax);
     return counts[3];
   }
 
-  if ([...Array(stackOrder.length)].some((_, l) => maxValueForStack[stackOrder.slice(0, l)] > counts[3])) {
+  // if (stackOrder.search('--C-C-C---OC--O--G') !== -1) {
+  //   console.log('hero');
+  // }
+
+  const predictiveMaxGeodeCount = (25 - minute) * (25 - minute + 1) / 2 + (25 - minute) * robots[3] + counts[3];
+  if (predictiveMaxGeodeCount < blueprints[blueprintId].globalMax) {
+    console.log(stackOrder, counts[3], blueprints[blueprintId].globalMax);
+    return 0;
+  }
+
+  if ([...Array(stackOrder.length)].some((_, l) => maxValueForStack[stackOrder.slice(0, l)] >= predictiveMaxGeodeCount)) {
+    console.log(stackOrder, counts[3], blueprints[blueprintId].globalMax);
     return counts[3];
   }
 
+  let results = [];
+  // Don't buy wait
+  let newCountsPlusChanges = [
+    counts[0] + robots[0],
+    counts[1] + robots[1],
+    counts[2] + robots[2],
+    counts[3] + robots[3]
+  ];
 
-  const results = [];
-  ['G', 'O', 'R', 'C', null].map(robotToBuy => {
-    if (!robotToBuy) {
-      const newCounts = [
-        counts[0] + robots[0],
-        counts[1] + robots[1],
-        counts[2] + robots[2],
-        counts[3] + robots[3]
-      ];
+  let newStackOrder = `${stackOrder}-`;
+  maxValueForStack[newStackOrder] = Math.max(maxValueForStack[newStackOrder] || 0, counts[3]);
+  results.push(recurse(blueprintId, newCountsPlusChanges, robots, minute + 1, newStackOrder));
 
-      maxValueForStack[stackOrder] = Math.max(maxValueForStack[stackOrder] || 0, counts[3]);
+  // and buy
+  const recommendedBuy = ['G', 'O', 'C', 'R'].find(robotToBuy => canProduceRobot(blueprintId, robotToBuy, counts));
+  if (recommendedBuy) {
+    const newCounts = recommendedBuy ? canProduceRobot(blueprintId, recommendedBuy, counts) : counts;
 
-      results.push(recurse(blueprintId, newCounts, robots, minute + 1, `${stackOrder} `));
-      return;
-    }
-
-    const newCounts = canProduceRobot(blueprintId, robotToBuy, counts);
-    if (!newCounts) {
-      return;
-    }
+    newCountsPlusChanges = [
+      newCounts[0] + robots[0],
+      newCounts[1] + robots[1],
+      newCounts[2] + robots[2],
+      newCounts[3] + robots[3]
+    ];
 
     const newRobots = robots.slice(0);
-    newRobots[robotOrderMap[robotToBuy]]++;
+    if (recommendedBuy) {
+      newRobots[robotOrderMap[recommendedBuy]]++;
+    }
 
-    results.push(recurse(blueprintId, newCounts, newRobots, minute, `${stackOrder}${robotToBuy}`));
-  });
-  const max = Math.max(...results);
-  maxValueForStack[stackOrder] = Math.max(maxValueForStack[stackOrder] || 0, max);
-  return max;
+    newStackOrder = `${stackOrder}${recommendedBuy}`;
+    maxValueForStack[newStackOrder] = Math.max(maxValueForStack[newStackOrder] || 0, counts[3]);
+    results.push(recurse(blueprintId, newCountsPlusChanges, newRobots, minute + 1, newStackOrder));
+  }
+  return Math.max(...results);
 }
 
 let geodeSum = 0;
-for (const blueprint of Object.values(blueprints)) {
-  const orderPurchaseListSum = recurse(blueprint.blueprintId, [0, 0, 0, 0], [1, 0, 0, 0], 0, []);
+for (const blueprint of Object.values(blueprints).slice(1)) {
+  maxValueForStack = {};
+  const orderPurchaseListSum = recurse(blueprint.blueprintId, [0, 0, 0, 0], [1, 0, 0, 0], 1, '');
+  console.log(blueprint.maxSequence, orderPurchaseListSum);
   geodeSum += orderPurchaseListSum * blueprint.blueprintId;
 }
 
